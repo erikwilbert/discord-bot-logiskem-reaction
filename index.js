@@ -10,15 +10,21 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel],
 });
 
-client.once('ready', () => {
-  console.log(`✅ Bot aktif sebagai ${client.user.tag}`);
-});
-
 // === RULE EMOTE PER CHANNEL ===
 const EMOTE_RULES = {
   "🚗pos-1": ["✅", "👌", "🚨", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "➕"],
   "🛗pos-2": ["✅", "👌", "🚨"]
 };
+
+client.once('ready', async () => {
+  console.log(`✅ Bot aktif sebagai ${client.user.tag}`);
+
+  await client.guilds.fetch();
+});
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // === AUTO REACT LOGIC ===
 client.on('messageCreate', async (message) => {
@@ -26,15 +32,13 @@ client.on('messageCreate', async (message) => {
   const channelName = message.channel.name;
   const emojis = EMOTE_RULES[channelName];
 
-  if (emojis) {
-    for (const emoji of emojis) {
-      try {
-        await message.react(emoji);
-      } catch (err) {
-        console.warn(`Gagal react ${emoji} di #${channelName}: ${err.message}`);
-      }
-    }
-  }
+  if (!emojis) return;
+
+  Promise.allSettled(
+    emojis.map(e => message.react(e).catch(err => {
+      console.warn(`❗ Gagal react ${e}: ${err.message}`);
+    }))
+  );
 });
 
 // === START ===
